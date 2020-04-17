@@ -1,0 +1,81 @@
+name: High Memory Usage Alert
+
+indexPattern: metricbeat-*
+
+request:
+  aggs:
+    hosts:
+      terms:
+        field: agent.hostname
+      aggs:
+        avg_memory:
+          avg:
+            field: system.memory.actual.used.pct
+        last_event:
+          top_hits:
+            size: 1
+        avg_memory_filter:
+          bucket_selector:
+            buckets_path:
+              avgMemory: avg_memory
+            script: params.avgMemory > 0.85 # Alert when average for a host is > 85%
+  query:
+    bool:
+      filter:
+        - match_all: {}
+        - match_phrase:
+            metricset.name: memory
+        - match_phrase:
+            event.module: system
+        - range:
+            "@timestamp":
+              format: strict_date_optional_time
+              gte: now-15m
+              lte: now
+
+interval: "*/5 * * * *"
+
+waitBeforeReAlert:
+  duration:
+    minutes: 14
+
+alertTrigger:
+  type: threshold
+  aggregation: count
+  operator: gt
+  value: 0
+  rowPath: aggregations.hosts.buckets
+
+alert:
+  type: email
+
+  to:
+    - user@gmail.com
+  from: auto@domain.com
+
+  title: 'High Memory Usage Alert'
+
+  summary: 'The following servers have an average memory usage above 85% in the last 15 minutes.'
+
+  links:
+    - link: http://elasticsearch.lan:5601/app/infra#/infrastructure
+      text: Jump to Kibana
+
+  tables:
+    - summary: 'Results:'
+      rowPath: aggregations.hosts.buckets
+      columns:
+        - name: Host
+          valuePath: key
+        - name: Total Percent in Use
+          valuePath: avg_memory.value
+          type: number
+          format: 0.00%
+        - name: Bytes in Use
+          valuePath: last_event.hits.hits[0]._source.system.memory.actual.used.bytes
+          type: number
+          format: 0.00 b
+        - name: Total Bytes
+          valuePath: last_event.hits.hits[0]._source.system.memory.total
+          type: number
+          format: 0.00 b

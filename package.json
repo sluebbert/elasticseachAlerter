@@ -1,0 +1,83 @@
+{
+	"name": "elasticsearch_alerter",
+	"version": "1.0.3",
+	"scripts": {
+		"build": "tsc -p ./tsconfigProd.json",
+		"postbuild": "cp -r lib/defaultTemplates dist/",
+		"build-docker": "docker build -f dockerfile -t ${npm_package_name}:${npm_package_version} -t ${npm_package_name}:latest .",
+		"build-test": "tsc -b",
+		"start": "node dist/app.js",
+		"test": "TZ='+00:00' nyc mocha"
+	},
+	"dependencies": {
+		"cron-parser": "*",
+		"ejs": "*",
+		"js-yaml": "*",
+		"json-query": "*",
+		"nodemailer": "*",
+		"dayjs": "*",
+		"numeral": "*",
+		"yargs": "*"
+	},
+	"devDependencies": {
+		"@types/js-yaml": "*",
+		"@types/ejs": "*",
+		"@types/nodemailer": "*",
+		"@types/numeral": "*",
+		"@types/yargs": "*",
+		"@types/json-query": "*",
+		"@types/chai": "*",
+		"@types/mocha": "*",
+		"@types/node": "*",
+		"chai": "*",
+		"mocha": "*",
+		"mocha-multi-reporters": "*",
+		"nyc": "*",
+		"source-map-support": "*",
+		"ts-node": "*",
+		"typescript": "*"
+	},
+	"nyc": {
+		"include": [
+			"lib/**/*.ts",
+			"app.ts"
+		],
+		"extension": [
+			".ts"
+		],
+		"exclude": [
+			"*.js",
+			"**/*.d.ts",
+			"test"
+		],
+		"require": [
+			"ts-node/register",
+			"source-map-support/register"
+		],
+		"reporter": [
+			"text",
+			"html"
+		],
+		"report-dir": "./test_results/coverage",
+		"sourceMap": true,
+		"instrument": true,
+		"cache": true,
+		"all": true
+	},
+	"xunitReporterOptions": {
+		"output": "./test_results/xunit.xml"
+	},
+	"mocha": {
+		"require": [
+			"ts-node/register",
+			"source-map-support/register"
+		],
+		"full-trace": true,
+		"bail": true,
+		"reporter": "mocha-multi-reporters",
+		"reporter-option": "configFile=package.json",
+		"spec": [
+			"test/**/*.ts"
+		]
+	}
+}

@@ -1,0 +1,112 @@
+name: High Cpu Utilization Alert
+
+indexPattern: metricbeat-*
+
+request:
+  aggs:
+    hosts:
+      terms:
+        field: agent.hostname
+      aggs:
+        avg_cpu:
+          avg:
+            field: system.cpu.total.norm.pct
+        last_event:
+          top_hits:
+            size: 1
+        avg_cpu_filter:
+          bucket_selector:
+            buckets_path:
+              avgCpu: avg_cpu
+            script: params.avgCpu > 0.9 # Alert when average for a host is > 90%
+  query:
+    bool:
+      filter:
+        - match_all: {}
+        - match_phrase:
+            metricset.name: cpu
+        - match_phrase:
+            event.module: system
+        - range:
+            "@timestamp":
+              format: strict_date_optional_time
+              gte: now-15m
+              lte: now
+
+interval: "*/5 * * * *"
+delay: 60000 # Still run every 5 minutes, but shifted by 1 minute
+
+waitBeforeReAlert:
+  duration:
+    minutes: 14
+
+alertTrigger:
+  type: threshold
+  aggregation: count
+  operator: gt
+  value: 0
+  rowPath: aggregations.hosts.buckets
+
+alert:
+  type: tiered
+
+  restartAfterLast: true  
+
+  tiers:
+    # Tier 1
+    - type: email
+
+      to:
+        - user@gmail.com
+      from: auto@domain.com
+
+      title: 'High Cpu Utilization Alert Tier 1'
+
+      summary: 'The following servers have an average cpu utilization above 90% in the last 15 minutes.'
+
+      links:
+        - link: http://elasticsearch.lan:5601/app/infra#/infrastructure
+          text: Jump to Kibana
+
+      tables:
+        - summary: 'Results:'
+          rowPath: aggregations.hosts.buckets
+          columns:
+            - name: Host
+              valuePath: key
+            - name: Total Percent Utilized
+              valuePath: avg_cpu.value
+              type: number
+              format: 0.00%
+            - name: Cpu Count
+              valuePath: last_event.hits.hits[0]._source.system.cpu.cores
+              type: number
+
+    # Tier 2
+    - type: email
+
+      to:
+        - group@gmail.com
+      from: auto@domain.com
+
+      title: 'High Cpu Utilization Alert Tier 2'
+
+      summary: 'The following servers have an average cpu utilization above 90% in the last 30 minutes.'
+
+      links:
+        - link: http://elasticsearch.lan:5601/app/infra#/infrastructure
+          text: Jump to Kibana
+
+      tables:
+        - summary: 'Results:'
+          rowPath: aggregations.hosts.buckets
+          columns:
+            - name: Host
+              valuePath: key
+            - name: Total Percent Utilized
+              valuePath: avg_cpu.value
+              type: number
+              format: 0.00%
+            - name: Cpu Count
+              valuePath: last_event.hits.hits[0]._source.system.cpu.cores
+              type: number

@@ -1,0 +1,93 @@
+name: SSHD Events Alert
+
+indexPattern: journalbeat-*
+
+request:
+  query:
+    bool:
+      filter:
+        - bool:
+            filter:
+              - bool:
+                  minimum_should_match: 1
+                  should:
+                    - match_phrase:
+                        agent.hostname: prod-entry
+              - bool:
+                  filter:
+                    - bool:
+                        minimum_should_match: 1
+                        should:
+                          - match_phrase:
+                              systemd.unit: sshd.service
+                    - bool:
+                        filter:
+                          - bool:
+                              minimum_should_match: 1
+                              should:
+                                - exists:
+                                    field: sshd.eventname
+                          - bool:
+                              filter:
+                                - bool:
+                                    must_not:
+                                      bool:
+                                        minimum_should_match: 1
+                                        should:
+                                          - match_phrase:
+                                              client.ip: 192.168.1.0/24
+                                - bool:
+                                    must_not:
+                                      bool:
+                                        minimum_should_match: 1
+                                        should:
+                                          - match_phrase:
+                                              client.ip: "fd00::/8"
+        - range:
+            "@timestamp":
+              format: strict_date_optional_time
+              gte: "now/m-1m-10s"
+              lte: "now/m-10s" # A one minute window starting 10 seconds ago so we don't miss events that happened 1 second ago but that won't show up for another 5 seconds in Elasticsearch. These will be grabbed in the next run.
+
+interval: "*/1 * * * *"
+
+alertTrigger:
+  type: threshold
+  aggregation: count
+  operator: gt
+  value: 0
+
+alert:
+  type: email
+
+  to:
+    - user@gmail.com
+  from: auto@domain.com
+
+  title: '<%- results.hits.length %> SSHD Events Detected'
+
+  summary: '<%- results.hits.length %> SSHD event(s) detected in the last minute.'
+
+  links:
+    - www.google.com
+    - link: www.github.com
+      text: GitHub
+
+  tables:
+    - summary: 'SSHD Event(s):'
+      # limit: 5
+      columns:
+        - name: DateTime
+          valuePath: _source.@timestamp
+          type: date
+          format: 'M/D/YYYY h:mm:ss.SSS a'
+        - name: Host
+          valuePath: _source.agent.hostname
+        - name: Event
+          valuePath: _source.sshd.eventname
+        - name: User
+          valuePath: _source.sshd.username
+        - name: Client Ip
+          valuePath: _source.client.ip
+        - name: Client Region
+          valuePath: _source.client.geo.region_name

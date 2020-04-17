@@ -1,0 +1,9 @@
+elasticsearchHost: elasticsearch.lan
+logLevel: Verbose
+smtp:
+  host: smtp.gmail.com
+  port: 465
+  secure: true
+  user: testUser@gmail.com
+  pass: testpass
+  

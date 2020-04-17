@@ -1,0 +1,112 @@
+name: Performance Degradation Alert
+
+indexPattern: apm-*
+
+request:
+  size: 0
+  aggs:
+    services:
+      terms:
+        field: service.name
+        size: 500
+      aggs:
+        transactions:
+          terms:
+            field: transaction.name
+            size: 500
+          aggs:
+            stats_duration_base: # Get baseline from last 3 days
+              filter:
+                range:
+                  "@timestamp":
+                    format: strict_date_optional_time
+                    gte: now-3d
+                    lte: now-1h # Offset by an hour ago to avoid having the last hour of events impact the baseline
+              aggs:
+                stats:
+                  extended_stats:
+                    field: transaction.duration.us
+                    sigma: 3
+            stats_now: # Get average for last 5 minutes
+              filter:
+                range:
+                  "@timestamp":
+                    format: strict_date_optional_time
+                    gte: now-5m
+                    lte: now
+              aggs:
+                avg:
+                  avg:
+                    field: transaction.duration.us
+            last_event: # Get a transaction sample so we can grab data points common to this transaction group
+              top_hits:
+                size: 1
+            stats_filter: # Filter to only return buckets where now > baseline
+              bucket_selector:
+                buckets_path:
+                  base: stats_duration_base>stats.std_upper
+                  now: stats_now>avg
+                script: params.now > params.base
+  query:
+    bool:
+      filter:
+      - match_phrase:
+          processor.name: transaction
+      - match_phrase:
+          processor.event: transaction
+      - range:
+          "@timestamp":
+            format: strict_date_optional_time
+            gte: now-3d
+            lte: now
+
+interval: "*/5 * * * *"
+
+waitBeforeReAlert:
+  duration:
+    minutes: 14
+
+alertTrigger:
+  type: threshold
+  aggregation: count
+  operator: gt
+  value: 0
+  rowPath: aggregations.services.buckets.transactions.buckets
+
+alert:
+  type: email
+
+  to:
+    - user@gmail.com
+  from: auto@domain.com
+
+  title: 'Performance Degradation Detected'
+
+  summary: 'The following service methods are 3 standard deviations higher than average in duration over the last 5 minutes compared to the last 3 days.'
+
+  links:
+    - link: http://elasticsearch.lan:5601/app/apm#/services
+      text: Jump to Kibana
+
+  tables:
+    - summary: 'Results:'
+      rowPath: aggregations.services.buckets.transactions.buckets
+      columns:
+        - name: Service Name
+          valuePath: last_event.hits.hits[0]._source.service.name
+          link: 'http://elasticsearch.lan:5601/app/apm#/services/{last_event.hits.hits[0]._source.service.name}/transactions?rangeFrom=now-15m&rangeTo=now'
+        - name: Transaction Name
+          valuePath: key
+          link: 'http://elasticsearch.lan:5601/app/apm#/services/{last_event.hits.hits[0]._source.service.name}/transactions/view?rangeFrom=now-15m&rangeTo=now&refreshPaused=true&refreshInterval=0&traceId={last_event.hits.hits[0]._source.trace.id}&transactionId={last_event.hits.hits[0]._source.transaction.id}&transactionName={key}&transactionType={last_event.hits.hits[0]._source.transaction.type}'
+        - name: Baseline Duration Average
+          valuePath: stats_duration_base.stats.avg
+          type: number
+          format: '0.000s'
+        - name: StdDev Upper Limit
+          valuePath: stats_duration_base.stats.std_deviation_bounds.upper
+          type: number
+          format: '0.000s'
+        - name: Current Duration Average
+          valuePath: stats_now.avg.value
+          type: number
+          format: '0.000s'
