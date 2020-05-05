@@ -209,5 +209,5 @@ $ npm run build-docker
 
 An example of running the image:
 ```bash
-$ docker run -it --rm -e TZ="America/Chicago" -e EA_CONFIG="/alerting/config.yml" -e EA_RULE="/alerting/rules" -v /path/on/host/to/config/and/rules:/alerting elasticsearch_alerter
+$ docker run -it --rm -e TZ="America/Chicago" -e EA_CONFIG="/alerting/config.yml" -e EA_RULE="/alerting/rules" -v /path/on/host/to/config/and/rules:/alerting sluebbert/elasticsearch_alerter
 ```

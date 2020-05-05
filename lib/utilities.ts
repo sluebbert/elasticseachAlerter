@@ -22,6 +22,7 @@ export function formatValue(column: any, value: any)
 	{
 		if (column.type == 'date')
 			typedValue = dayjs(typedValue).format(column.format);
+
 		if (column.type == 'duration')
 		{
 			let unit = column.unit || 'ms';
@@ -34,8 +35,19 @@ export function formatValue(column: any, value: any)
 			let date = dayjs('1/1/1900').add(typedValue, unit);
 			typedValue = date.format(column.format);
 		}
+
 		if (column.type == 'number')
+		{
+			typedValue = parseFloat(typedValue);
+			if (column.format.indexOf('s') > -1)
+			{
+				let unit = column.unit || 'us';
+				if (unit == 'ms')
+					typedValue *= 1000;
+			}
+
 			typedValue = numeral(typedValue).format(column.format);
+		}
 	}
 
 	return typedValue;
