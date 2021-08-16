@@ -12,7 +12,7 @@ COPY package*.json ./
 
 # Install app dependencies
 RUN apk add --no-cache --virtual .gyp \
-		python \
+		python3 \
 		make \
 		g++ \
 	&& npm install --production\
