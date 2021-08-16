@@ -2,7 +2,7 @@
 import { readFileSync } from "fs";
 import { RuleRunner } from './lib/ruleRunner'
 import * as yargs from 'yargs';
-import { safeLoad } from "js-yaml";
+import { load } from "js-yaml";
 import { Configuration } from './lib/configuration';
 import { ConsoleLogger } from "./lib/models/logging/consoleLogger";
 import { setupNumeralExtensions } from "./lib/numeralExtensions";
@@ -47,11 +47,11 @@ let argv = yargs
 	})
 	.config('config', 'Path to a yaml config file.', (configPath: string) =>
 	{
-		return safeLoad(readFileSync(configPath, 'utf-8'));
+		return <object> load(readFileSync(configPath, 'utf-8'));
 	})
 	.help()
 	.alias('help', 'h')
-	.argv;
+	.parseSync();
 
 setupNumeralExtensions();
 

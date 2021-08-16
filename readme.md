@@ -191,6 +191,9 @@ A unique alert type that allows you to nest other alert types to setup tiers tha
 | restart | A flag that indicates whether or not iterating through the tiers should start over once the last tier is hit. Defaults to false. | |
 | tiers | A list of alert definitions that will be iterated through as long as the alert trigger conditions are met. | Yes |
 
+## Noop
+An alert type that causes no action to be taken. This may be helpful when used with a tiered alert type if you want to take no action on a certain tier.
+
 # Supported data types and formats
 When passing types and formats to the column entries of your tables, stick to javascript types and the following formats:
 | Data Type | Formatter |

@@ -1,6 +1,6 @@
 
 import { readFileSync } from "fs";
-import { safeLoad } from "js-yaml";
+import { load } from "js-yaml";
 import { LogLevel } from "./models/logging/iLogger";
 
 export class Configuration
@@ -48,7 +48,7 @@ export class SmtpOptions
 		if (definition.authFile)
 		{
 			let contents = readFileSync(definition.authFile, { encoding: 'utf8' });
-			let yaml = safeLoad(contents);
+			let yaml = <any> load(contents);
 			this.UserName = yaml.user;
 			this.Password = yaml.pass;
 		}

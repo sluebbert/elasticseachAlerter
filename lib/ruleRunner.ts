@@ -1,12 +1,11 @@
 
 import { readFileSync, readdirSync, statSync } from "fs";
 import * as path from "path";
-import { safeLoad } from "js-yaml";
+import { load } from "js-yaml";
 import { Rule } from './models/rule';
 import { getFormatted } from './utilities';
 import { Configuration } from './configuration';
 import { ILogger, LogLevel } from "./models/logging/iLogger";
-import { ConsoleLogger } from "./models/logging/consoleLogger";
 
 export class RuleRunner
 {
@@ -73,7 +72,7 @@ export class RuleRunner
 				if (fullFilename.endsWith('yaml') || fullFilename.endsWith('yml'))
 				{
 					var fileContents = readFileSync(fullFilename, { encoding: 'utf8' });
-					var loadedYaml = safeLoad(fileContents);
+					var loadedYaml = load(fileContents);
 					this.rules.push(new Rule(this.logger, this.config, loadedYaml));
 				}
 			}
@@ -81,7 +80,7 @@ export class RuleRunner
 		else
 		{
 			var fileContents = readFileSync(this.config.RulesPath, { encoding: 'utf8' });
-			var loadedYaml = safeLoad(fileContents);
+			var loadedYaml = load(fileContents);
 			this.rules.push(new Rule(this.logger, this.config, loadedYaml));
 		}
 	}

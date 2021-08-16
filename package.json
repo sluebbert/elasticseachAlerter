@@ -1,6 +1,6 @@
 {
 	"name": "elasticsearch_alerter",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"scripts": {
 		"build": "tsc -p ./tsconfigProd.json",
 		"postbuild": "cp -r lib/defaultTemplates dist/",
