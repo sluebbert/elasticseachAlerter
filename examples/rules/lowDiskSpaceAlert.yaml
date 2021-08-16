@@ -1,0 +1,90 @@
+name: Low Disk Space Alert
+
+indexPattern: metricbeat-*
+
+request:
+  size: 0
+  aggs:
+    hosts:
+      terms:
+        field: agent.hostname
+      aggs:
+        avg_pct:
+          avg:
+            field: system.filesystem.used.pct
+        last_event:
+          top_hits:
+            size: 1
+        avg_pct_filter:
+          bucket_selector:
+            buckets_path:
+              avgPct: avg_pct
+            script: params.avgPct > 0.95 # Alert when average for a host is > 95%
+  query:
+    bool:
+      filter:
+        - match_all: {}
+        - match_phrase:
+            metricset.name: filesystem
+        - match_phrase:
+            event.module: system
+        - match_phrase:
+            system.filesystem.mount_point: /
+        - range:
+            "@timestamp":
+              format: strict_date_optional_time
+              gte: now-15m
+              lte: now
+
+interval: "*/15 * * * *"
+
+waitBeforeReAlert:
+  duration:
+    minutes: 59
+
+followPaging: false
+
+alertTrigger:
+  type: threshold
+  aggregation: count
+  operator: gt
+  value: 0
+  rowPath: aggregations.hosts.buckets
+
+alert:
+  type: email
+
+  to:
+    - user@gmail.com
+  from: auto@domain.com
+
+  title: 'Low Disk Space Alert'
+
+  summary: 'The following servers have a disk space usage above 95% in the last 1 minute.'
+
+  links:
+    - link: http://elasticsearch.lan:5601/app/infra#/infrastructure
+      text: Jump to Kibana
+
+  tables:
+    - summary: 'Results:'
+      rowPath: aggregations.hosts.buckets
+      columns:
+        - name: Host
+          valuePath: key
+        - name: Total Percent Used
+          valuePath: avg_pct.value
+          type: number
+          format: 0.00%
+        - name: Total Used
+          valuePath: last_event.hits.hits[0]._source.system.filesystem.used.bytes
+          type: number
+          format: 0.00 b
+        - name: Total Free
+          valuePath: last_event.hits.hits[0]._source.system.filesystem.free
+          type: number
+          format: 0.00 b
+        - name: Disk Size
+          valuePath: last_event.hits.hits[0]._source.system.filesystem.total
+          type: number
+          format: 0.00 b
